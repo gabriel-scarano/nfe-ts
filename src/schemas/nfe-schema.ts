@@ -1,21 +1,12 @@
 import z from 'zod';
 import { removeAccents, validateCnpj, validateCpf } from '../utils/string-utils';
-import { CodigoUFEnum, type CodigoUF } from './xml-types';
+import { CodigoUFEnum, type CodigoUF } from '../xml/xml-types';
+import { numberWithPrecisionSchema, refinedStringSchema, ufSchema } from '../utils/schema-utils';
+import { icms00Schema, icms10Schema, icms20Schema, icms30Schema, icms40Schema, icms51Schema, icms60Schema, icms70Schema, icms90Schema, icmsPartSchema, icmsSN101Schema, icmsSN102Schema, icmsSN201Schema, icmsSN202Schema, icmsSN500Schema, icmsSN900Schema, icmsSTSchema, icmsUFDestSchema } from './icms-schema';
 
 export const cnpjSchema = z.string().length(14).refine(val => validateCnpj(val));
 export const cpfSchema = z.string().length(11).refine(val => validateCpf(val));
 export const idEstrangeiroSchema = z.string().length(5).or(z.string().length(20)).optional();
-export const refinedStringSchema = (min: number, max: number) => {
-    return z.string().trim().min(min).max(max).transform(t => removeAccents(t));
-};
-export const numberWithPrecisionSchema = (precision: number) => {
-    return z.number().refine(
-        (val) => Number.isInteger(val * 10 * precision),
-        {
-            message: `O número deve ter no máximo ${precision} casas decimais`,
-        }
-    )
-}
 export const dateSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/);
 export const cEanSchema = z.union([
     z.string().trim().length(8),
@@ -23,35 +14,7 @@ export const cEanSchema = z.union([
     z.string().trim().length(13),
     z.string().trim().length(14),
 ]);
-export const ufSchema = z.enum([
-    'AC',
-    'AL',
-    'AP',
-    'AM',
-    'BA',
-    'CE',
-    'DF',
-    'ES',
-    'GO',
-    'MA',
-    'MT',
-    'MS',
-    'MG',
-    'PA',
-    'PB',
-    'PR',
-    'PE',
-    'PI',
-    'RJ',
-    'RN',
-    'RS',
-    'RO',
-    'RR',
-    'SC',
-    'SP',
-    'SE',
-    'TO'
-]);
+
 export const enderecoSchema = z.object({
     xLgr: refinedStringSchema(2, 60),
     nro: refinedStringSchema(1, 60),
@@ -421,6 +384,29 @@ export const prodSchema = (ufEmitente: CodigoUF) => {
                 combSchema,
                 nRECOPISchema,
             ]).optional(),
+            imposto: z.object({
+                vTotTrib: numberWithPrecisionSchema(2).optional(),
+                icms: z.union([
+                    icms00Schema,
+                    icms10Schema,
+                    icms20Schema,
+                    icms30Schema,
+                    icms40Schema,
+                    icms51Schema,
+                    icms60Schema,
+                    icms70Schema,
+                    icms90Schema,
+                    icmsPartSchema,
+                    icmsSTSchema,
+                    icmsSN101Schema,
+                    icmsSN102Schema,
+                    icmsSN201Schema,
+                    icmsSN202Schema,
+                    icmsSN500Schema,
+                    icmsSN900Schema,
+                ]),
+                ICMSUFDest: icmsUFDestSchema.optional(),
+            })
 
         }).refine(
             (data) => {
