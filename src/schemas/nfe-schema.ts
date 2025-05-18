@@ -1,4 +1,4 @@
-import z from 'zod';
+import z, { number } from 'zod';
 import { removeAccents, validateCnpj, validateCpf } from '../utils/string-utils';
 import { CodigoUFEnum, type CodigoUF } from '../xml/xml-types';
 import { numberWithPrecisionSchema, refinedStringSchema, ufSchema } from '../utils/schema-utils';
@@ -341,6 +341,231 @@ export const combSchema = z.object({
 
 export const nRECOPISchema = z.string().regex(/^\d{20}$/);
 
+export const ipiSchema = z.object({
+    CNPJProd: cnpjSchema.optional(),
+    cSelo: refinedStringSchema(1, 60).optional(),
+    qSelo: z.number().int().positive().optional(),
+    cEnq: z.string().regex(/^\d{1,3}$/),
+    CST: z.enum(["00", "49", "50", "99", "01", "02", "03", "04", "05", "51", "52", "53", "54", "55"]),
+    IPITrib: z.object({
+        calculo: z.union([
+            z.object({
+                vBC: numberWithPrecisionSchema(2),
+                pIPI: numberWithPrecisionSchema(4),
+            }),
+            z.object({
+                qUnid: numberWithPrecisionSchema(4),
+                vUnid: numberWithPrecisionSchema(4),
+                vIPI: numberWithPrecisionSchema(2),
+            })
+        ])
+    }).optional(),
+}).refine(
+    (data) => {
+        if (["00", "49", "50", "99"].includes(data.CST) && data.IPITrib === undefined) {
+            return false;
+        }
+        return true;
+    },
+    {
+        message: "Para grupo do CST = ('00', '49', '50', '99'), IPITrib é obrigatório",
+        path: ["IPITrib"]
+    }
+);
+
+export const iiSchema = z.object({
+    vBC: numberWithPrecisionSchema(2),
+    vDespAdu: numberWithPrecisionSchema(2),
+    vII: numberWithPrecisionSchema(2),
+    vIOF: numberWithPrecisionSchema(2),
+})
+
+export const pisSchema = z.object({
+    CST: z.enum(["01", "02", "03", "04", "05", "06", "07", "08", "09", "49", "50", "51", "52", "53", "54", "55", "56", "60", "61", "62", "63", "64", "65", "66", "67", "70", "71", "72", "73", "74", "75", "98", "99"]),
+    PISAliq: z.object({
+        vBC: numberWithPrecisionSchema(2),
+        pPIS: numberWithPrecisionSchema(4),
+        vPIS: numberWithPrecisionSchema(2),
+    }).optional(),
+    PISQtde: z.object({
+        qBCProd: numberWithPrecisionSchema(4),
+        vAliqProd: numberWithPrecisionSchema(4),
+        vPIS: numberWithPrecisionSchema(2),
+    }).optional(),
+    PISOutr: z.object({
+        vBC: numberWithPrecisionSchema(2).optional(),
+        pPIS: numberWithPrecisionSchema(4).optional(),
+    }).optional(),
+}).refine(
+    (data) => {
+        if (["01", "02"].includes(data.CST) && data.PISAliq === undefined) {
+            return false;
+        }
+        return true;
+    },
+    {
+        message: "Para grupo do CST = ('01', '02'), PISAliq é obrigatório",
+        path: ["PISAliq"]
+    }
+).refine(
+    (data) => {
+        if (["03"].includes(data.CST) && data.PISQtde === undefined) {
+            return false;
+        }
+        return true;
+    },
+    {
+        message: "Para grupo do CST = '03', PISQtde é obrigatório",
+        path: ["PISQtde"]
+    }
+);
+
+export const pisSTSchema = z.object({
+    calculo: z.union([
+        z.object({
+            vBC: numberWithPrecisionSchema(2),
+            pPIS: numberWithPrecisionSchema(4),
+        }),
+        z.object({
+            qBCProd: numberWithPrecisionSchema(4),
+            vAliqProd: numberWithPrecisionSchema(4),
+        })
+    ]),
+    vPIS: numberWithPrecisionSchema(2),
+});
+
+export const cofinsSchema = z.object({
+    CST: z.enum(["01", "02", "03", "04", "05", "06", "07", "08", "09", "49", "50", "51", "52", "53", "54", "55", "56", "60", "61", "62", "63", "64", "65", "66", "67", "70", "71", "72", "73", "74", "75", "98", "99"]),
+    COFINSAliq: z.object({
+        vBC: numberWithPrecisionSchema(2),
+        pCOFINS: numberWithPrecisionSchema(4),
+        vCOFINS: numberWithPrecisionSchema(2),
+    }).optional(),
+    COFINSQtde: z.object({
+        qBCProd: numberWithPrecisionSchema(4),
+        vAliqProd: numberWithPrecisionSchema(4),
+        vCOFINS: numberWithPrecisionSchema(2),
+    }).optional(),
+    COFINSOutr: z.object({
+        calculo: z.union([
+            z.object({
+                vBC: numberWithPrecisionSchema(2).optional(),
+                pCOFINS: numberWithPrecisionSchema(4).optional(),
+            }),
+            z.object({
+                qBCProd: numberWithPrecisionSchema(4),
+                vAliqProd: numberWithPrecisionSchema(4),
+                vCOFINS: numberWithPrecisionSchema(2),
+            })
+        ])
+    }).optional(),
+    vCOFINS: numberWithPrecisionSchema(2),
+}).refine(
+    (data) => {
+        if (["01", "02"].includes(data.CST) && data.COFINSAliq === undefined) {
+            return false;
+        }
+        return true;
+    },
+    {
+        message: "Para grupo do CST = ('01', '02'), COFINSAliq é obrigatório",
+        path: ["COFINSAliq"]
+    }
+).refine(
+    (data) => {
+        if (["03"].includes(data.CST) && data.COFINSQtde === undefined) {
+            return false;
+        }
+        return true;
+    },
+    {
+        message: "Para grupo do CST = '03', COFINSQtde é obrigatório",
+        path: ["COFINSQtde"]
+    }
+).refine(
+    (data) => {
+        if (["49", "50", "51", "52", "53", "54", "55", "56", "60", "61", "62", "63", "64", "65", "66", "67", "70", "71", "72", "73", "74", "75", "98", "99"].includes(data.CST) && data.COFINSQtde === undefined) {
+            return false;
+        }
+        return true;
+    },
+    {
+        message: "Para grupo do CST = ('49', '50', '51', '52', '53', '54', '55', '56', '60', '61', '62', '63', '64', '65', '66', '67', '70', '71', '72', '73', '74', '75', '98', '99'), COFINSOutr é obrigatório",
+        path: ["COFINSOutr"]
+    }
+);
+
+export const cofinsSTSchema = z.object({
+    calculo: z.union([
+        z.object({
+            vBC: numberWithPrecisionSchema(2),
+            pCOFINS: numberWithPrecisionSchema(4),
+        }),
+        z.object({
+            qBCProd: numberWithPrecisionSchema(4),
+            vAliqProd: numberWithPrecisionSchema(4),
+        })
+    ]),
+    vCOFINS: numberWithPrecisionSchema(2),
+});
+
+export const issqnSchema = z.object({
+    vBC: numberWithPrecisionSchema(2),
+    vAliq: numberWithPrecisionSchema(4),
+    vISSQN: numberWithPrecisionSchema(2),
+    cMunFG: z.string().regex(/^\d{7}$/),
+    cListServ: z.string().regex(/^\d{5}$/),
+    vDeducao: numberWithPrecisionSchema(2).optional(),
+    vOutro: numberWithPrecisionSchema(2).optional(),
+    vDescIncond: numberWithPrecisionSchema(2).optional(),
+    vDescCond: numberWithPrecisionSchema(2).optional(),
+    vISSRet: numberWithPrecisionSchema(2).optional(),
+    indISS: z.enum(["1", "2", "3", "4", "5", "6", "7"]),
+    cServico: refinedStringSchema(1, 20).optional(),
+    cMun: z.string().regex(/^\d{7}$/).optional(),
+    cPais: z.number().int().optional(),
+    nProcesso: refinedStringSchema(1, 30).optional(),
+    indIncentivo: z.enum(["1", "2"]),
+});
+
+export const impostoDevolSchema = z.object({
+    pDevol: numberWithPrecisionSchema(4),
+    vIPIDevol: numberWithPrecisionSchema(2),
+})
+
+
+export const impostoSchema = z.object({
+    vTotTrib: numberWithPrecisionSchema(2).optional(),
+    icms: z.union([
+        icms00Schema,
+        icms10Schema,
+        icms20Schema,
+        icms30Schema,
+        icms40Schema,
+        icms51Schema,
+        icms60Schema,
+        icms70Schema,
+        icms90Schema,
+        icmsPartSchema,
+        icmsSTSchema,
+        icmsSN101Schema,
+        icmsSN102Schema,
+        icmsSN201Schema,
+        icmsSN202Schema,
+        icmsSN500Schema,
+        icmsSN900Schema,
+    ]),
+    ICMSUFDest: icmsUFDestSchema.optional(),
+    IPI: ipiSchema.optional(),
+    II: iiSchema.optional(),
+    PIS: pisSchema.optional(),
+    PISST: pisSTSchema.optional(),
+    COFINS: cofinsSchema.optional(),
+    COFINSST: cofinsSTSchema.optional(),
+    ISSQN: issqnSchema.optional(),
+});
+
+
 export const prodSchema = (ufEmitente: CodigoUF) => {
     return z.array(
         z.object({
@@ -384,30 +609,9 @@ export const prodSchema = (ufEmitente: CodigoUF) => {
                 combSchema,
                 nRECOPISchema,
             ]).optional(),
-            imposto: z.object({
-                vTotTrib: numberWithPrecisionSchema(2).optional(),
-                icms: z.union([
-                    icms00Schema,
-                    icms10Schema,
-                    icms20Schema,
-                    icms30Schema,
-                    icms40Schema,
-                    icms51Schema,
-                    icms60Schema,
-                    icms70Schema,
-                    icms90Schema,
-                    icmsPartSchema,
-                    icmsSTSchema,
-                    icmsSN101Schema,
-                    icmsSN102Schema,
-                    icmsSN201Schema,
-                    icmsSN202Schema,
-                    icmsSN500Schema,
-                    icmsSN900Schema,
-                ]),
-                ICMSUFDest: icmsUFDestSchema.optional(),
-            })
-
+            imposto: impostoSchema,
+            impostoDevolSchema: impostoDevolSchema.optional(),
+            infAdProd: refinedStringSchema(1, 500).optional(),
         }).refine(
             (data) => {
                 if (data.CEST) {
@@ -436,6 +640,101 @@ export const prodSchema = (ufEmitente: CodigoUF) => {
     ).min(1).max(990)
 }
 
+export const transpSchema = z.object({
+    modFrete: z.enum(["0", "1", "2", "3", "4", "9"]),
+    transporta: z.object({
+        cpfCnpj: z.union([
+            cnpjSchema,
+            cpfSchema
+        ]).optional(),
+        xNome: refinedStringSchema(2, 60).optional(),
+        IE: z.string().optional(), // TODO validação da IE
+        xEnder: refinedStringSchema(1, 60).optional(),
+        xMun: refinedStringSchema(1, 60).optional(),
+        UF: z.union([
+            ufSchema,
+            z.enum(['EX']),
+        ]).optional(),
+    }).optional().refine(
+        (data) => {
+            if (data && data.IE && data.UF == undefined) {
+                return false;
+            }
+            return true;
+        },
+        {
+            message: "Para IE preenchida, UF é obrigatória",
+            path: ["UF"]
+        }
+    ),
+    retTransp: z.object({
+        vServ: numberWithPrecisionSchema(2),
+        vBCRet: numberWithPrecisionSchema(2),
+        pICMSRet: numberWithPrecisionSchema(4),
+        vICMSRet: numberWithPrecisionSchema(2),
+        CFOP: z.number().int().gte(1000).lte(9999),
+        cMunFG: z.string().regex(/^\d{7}$/),
+    }).optional(),
+    transpVeicVagaoBalsa: z.object({
+        veicTransp: z.object({
+            placa: refinedStringSchema(7, 7),
+            UF: z.union([
+                ufSchema,
+                z.enum(['EX']),
+            ]),
+            RNTC: refinedStringSchema(1, 20).optional(),
+        }).optional(),
+        reboque: z.array(z.object({
+            placa: refinedStringSchema(7, 7),
+            UF: z.union([
+                ufSchema,
+                z.enum(['EX']),
+            ]),
+            RNTC: refinedStringSchema(1, 20).optional(),
+        })).min(1).max(5).optional(),
+        vagao: refinedStringSchema(1, 20).optional(),
+        balsa: refinedStringSchema(1, 20).optional(),
+    }).optional(),
+    vol: z.array(z.object({
+        qVol: numberWithPrecisionSchema(0).optional(),
+        esp: refinedStringSchema(1, 60).optional(),
+        marca: refinedStringSchema(1, 60).optional(),
+        nVol: refinedStringSchema(1, 60).optional(),
+        pesoL: numberWithPrecisionSchema(3).optional(),
+        pesoB: numberWithPrecisionSchema(3).optional(),
+        lacres: z.array(refinedStringSchema(1, 60)).min(1).max(5000).optional(),
+    })).min(1).max(5000).optional(),
+});
+
+export const cobrSchema = z.object({
+    fat: z.object({
+        nFat: refinedStringSchema(1, 60).optional(),
+        vOrig: numberWithPrecisionSchema(2).optional(),
+        vDesc: numberWithPrecisionSchema(2).optional(),
+        vLiq: numberWithPrecisionSchema(2).optional(),
+    }).optional(),
+    dup: z.array(z.object({
+        nDup: z.number().int().positive().gt(0).lte(120).optional(),
+        dVenc: dateSchema.optional(),
+        vDup: numberWithPrecisionSchema(2),
+    })).min(1).max(120).optional(),
+})
+
+export const pagSchema = z.object({
+    detPag: z.array(z.object({
+        indPag: z.enum(["0", "1"]).optional(),
+        tPag: z.enum(["01", "02", "03", "04", "05", "10", "11", "12", "13", "15", "16", "17", "18", "19", "90", "99"]),
+        vPag: numberWithPrecisionSchema(2),
+        card: z.object({
+            tpIntegra: z.enum(["1", "2"]),
+            CNPJ: cnpjSchema.optional(),
+            tBand: z.enum(["01", "02", "03", "04", "05", "06", "07", "08", "09", "99"]).optional(),
+            cAut: refinedStringSchema(1, 20).optional(),
+        }).optional(),
+    })).min(1).max(100),
+    vTroco: numberWithPrecisionSchema(2).optional(),
+})
+
 export const nfeSchema = (ufEmitente: CodigoUF) => z.object({
     ide: ideSchema,
     emit: emitSchema,
@@ -444,5 +743,109 @@ export const nfeSchema = (ufEmitente: CodigoUF) => z.object({
     entrega: entregaSchema.optional(),
     autXML: autXMLSchema.optional(),
     prod: prodSchema(ufEmitente),
-
+    total: z.object({
+        ICMSTot: z.object({
+            vBC: numberWithPrecisionSchema(2),
+            vICMS: numberWithPrecisionSchema(2),
+            vICMSDeson: numberWithPrecisionSchema(2),
+            vFCPUFDest: numberWithPrecisionSchema(2).optional(),
+            vICMSUFDest: numberWithPrecisionSchema(2).optional(),
+            vICMSUFRemet: numberWithPrecisionSchema(2).optional(),
+            vFCP: numberWithPrecisionSchema(2),
+            vBCST: numberWithPrecisionSchema(2),
+            vST: numberWithPrecisionSchema(2),
+            vFCPST: numberWithPrecisionSchema(2),
+            vFCPSTRet: numberWithPrecisionSchema(2),
+            vProd: numberWithPrecisionSchema(2),
+            vFrete: numberWithPrecisionSchema(2),
+            vSeg: numberWithPrecisionSchema(2),
+            vDesc: numberWithPrecisionSchema(2),
+            vII: numberWithPrecisionSchema(2),
+            vIPI: numberWithPrecisionSchema(2),
+            vIPIDevol: numberWithPrecisionSchema(2),
+            vPIS: numberWithPrecisionSchema(2),
+            vCOFINS: numberWithPrecisionSchema(2),
+            vOutro: numberWithPrecisionSchema(2),
+            vNF: numberWithPrecisionSchema(2),
+            vTotTrib: numberWithPrecisionSchema(2).optional(),
+        }),
+        ISSQNtot: z.object({
+            vServ: numberWithPrecisionSchema(2).optional(),
+            vBC: numberWithPrecisionSchema(2).optional(),
+            vISS: numberWithPrecisionSchema(2).optional(),
+            vPIS: numberWithPrecisionSchema(2).optional(),
+            vCOFINS: numberWithPrecisionSchema(2).optional(),
+            dCompet: dateSchema,
+            vDeducao: numberWithPrecisionSchema(2).optional(),
+            vOutro: numberWithPrecisionSchema(2).optional(),
+            vDescIncond: numberWithPrecisionSchema(2).optional(),
+            vDescCond: numberWithPrecisionSchema(2).optional(),
+            vISSRet: numberWithPrecisionSchema(2).optional(),
+            cRegTrib: z.enum(["1", "2", "3", "4", "5", "6"]).optional(),
+        }).optional(),
+        retTrib: z.object({
+            vRetPIS: numberWithPrecisionSchema(2).optional(),
+            vRetCOFINS: numberWithPrecisionSchema(2).optional(),
+            vRetCSLL: numberWithPrecisionSchema(2).optional(),
+            vBCIRRF: numberWithPrecisionSchema(2).optional(),
+            vIRRF: numberWithPrecisionSchema(2).optional(),
+            vBCRetPrev: numberWithPrecisionSchema(2).optional(),
+            vRetPrev: numberWithPrecisionSchema(2).optional(),
+        }).optional(),
+        transp: transpSchema,
+        cobr: cobrSchema.optional(),
+        pag: pagSchema,
+        infIntermed: z.object({
+            CNPJ: cnpjSchema,
+            idCadIntTran: refinedStringSchema(60, 60),
+        }).optional(),
+        infAdic: z.object({
+            infAdFisco: refinedStringSchema(1, 2000).optional(),
+            infCpl: refinedStringSchema(1, 5000).optional(),
+            obsCont: z.array(z.object({
+                xCampo: refinedStringSchema(1, 20),
+                xTexto: refinedStringSchema(1, 60),
+            })).min(1).max(10).optional(),
+            obsFisco: z.array(z.object({
+                xCampo: refinedStringSchema(1, 20),
+                xTexto: refinedStringSchema(1, 60),
+            })).min(1).max(10).optional(),
+            procRef: z.array(z.object({
+                nProc: refinedStringSchema(1, 60),
+                indProc: z.enum(["0", "1", "2", "3", "9"]),
+            })).min(1).max(100).optional(),
+        }).optional(),
+        exporta: z.object({
+            UFSaidaPais: ufSchema,
+            xLocExporta: refinedStringSchema(1, 60),
+            xLocDespacho: refinedStringSchema(1, 60).optional(),
+        }).optional(),
+        compra: z.object({
+            xNEmp: refinedStringSchema(1, 22).optional(),
+            xPed: refinedStringSchema(1, 60).optional(),
+            xCont: refinedStringSchema(1, 60).optional(),
+        }).optional(),
+        cana: z.object({
+            safra: z.string().regex(/^\d{4}(\/\d{4})?$/, {
+                message: 'A safra deve estar no formato "AAAA" ou "AAAA/AAAA"',
+            }),
+            ref: z.string().regex(/^(0[1-9]|1[0-2])\/\d{4}$/, {
+                message: 'A referência deve estar no formato "MM/AAAA"',
+            }),
+            forDia: z.array(z.object({
+                dia: z.number().int().gte(0).lte(99),
+                qtde: numberWithPrecisionSchema(10),
+                qTotMes: numberWithPrecisionSchema(10),
+                qTotAnt: numberWithPrecisionSchema(10),
+                qtqTotGerde: numberWithPrecisionSchema(10),
+            })).min(1).max(31),
+            deduc: z.array(z.object({
+                xDed: refinedStringSchema(1, 60),
+                vDed: numberWithPrecisionSchema(2),
+                vFor: numberWithPrecisionSchema(2),
+                vTotDed: numberWithPrecisionSchema(2),
+                vLiqFor: numberWithPrecisionSchema(2),
+            })).min(1).max(10).optional(),
+        }).optional(),
+    }),
 })
